@@ -15,6 +15,11 @@ CLAUDE.html
 CLAUDE.md
 WORKFLOW.md
 
+# LinkedIn post drafts (private — narrative working copies)
+linkedin-post-draft.docx
+linkedin-post-draft.md
+*.linkedin-draft.docx
+
 # Raw WHO API dumps (re-fetch with curl per R/prep_africa_mmr.R)
 data/who_mmr_raw.json
 data/who_countries_raw.json
@@ -22,3 +27,11 @@ data/who_countries_raw.json
 # Cached API data (re-fetch with R/fetch_validation_data.R)
 data/validation_cache.rds
 .positai
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+*.log
