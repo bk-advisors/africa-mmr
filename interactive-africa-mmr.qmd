@@ -1,0 +1,151 @@
+---
+title: "African Maternal Mortality — Interactive"
+subtitle: "Hover over any bar to see the country, year, MMR, and the WHO uncertainty range"
+format:
+  html:
+    self-contained: true
+    page-layout: full
+    toc: false
+    output-file: index.html
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE, echo = FALSE)
+```
+
+```{r interactive-barplot, fig.width=10, fig.height=14}
+library(ggplot2)
+library(dplyr)
+library(patchwork)
+library(ggiraph)
+library(scales)
+
+source("R/theme_bka.R")
+
+# ---- Load real WHO MMR data ----
+mmr <- read.csv("data/africa_mmr.csv") %>%
+  arrange(mmr) %>%
+  mutate(country = factor(country, levels = country))
+
+# ---- Build tooltip text (HTML) ----
+mmr <- mmr %>%
+  mutate(
+    bar_id = paste0("country_", country_code),
+    tooltip_text = paste0(
+      "<b>", country, "</b> (", year, ")<br>",
+      "<b>", comma(round(mmr)), "</b> deaths per 100,000 live births<br>",
+      "WHO uncertainty range: ", comma(round(low)), "–", comma(round(high))
+    )
+  )
+
+# ---- BKA palette (deliberately not Economist blue+red) ----
+BAR_FILL    <- "#242852"   # BKA navy — sober, authoritative bar fill
+BRAND_COLOR <- "#F8A623"   # BKA amber — warm accent stripe
+LABEL_BLUE  <- "#005CB9"   # BKA dark blue — only for outside-bar labels
+BKA_NAVY    <- "#242852"   # title text
+BKA_GREY    <- "#606060"   # subtitle, caption
+
+LABEL_THRESHOLD <- 200
+
+# ---- Main interactive horizontal barplot ----
+plt <- ggplot(mmr, aes(x = mmr, y = country)) +
+  geom_col_interactive(
+    aes(tooltip = tooltip_text, data_id = bar_id),
+    fill = BAR_FILL, width = 0.7
+  ) +
+  scale_x_continuous(
+    limits = c(0, 1050),
+    breaks = seq(0, 1000, by = 200),
+    labels = scales::comma,
+    expand = c(0, 0),
+    position = "top"
+  ) +
+  scale_y_discrete(expand = expansion(add = c(0, 0.6))) +
+  geom_label(
+    data = subset(mmr, mmr < LABEL_THRESHOLD),
+    aes(x = mmr, label = country),
+    hjust = 0, nudge_x = 12,
+    colour = LABEL_BLUE, fill = "white",
+    linewidth = NA, label.padding = unit(0.18, "lines"),
+    family = "Lato", size = 3.6
+  ) +
+  geom_text(
+    data = subset(mmr, mmr >= LABEL_THRESHOLD),
+    aes(x = 0, label = country),
+    hjust = 0, nudge_x = 15,
+    colour = "white", family = "Lato",
+    size = 3.6, fontface = "bold"
+  ) +
+  labs(x = NULL, y = NULL) +
+  theme_bka() +
+  theme(
+    panel.grid.major.x = element_line(color = "#A8BAC4", linewidth = 0.3),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor   = element_blank(),
+    axis.title.x       = element_blank(),
+    axis.title.y       = element_blank(),
+    axis.line.y.left   = element_line(color = "black"),
+    axis.text.y        = element_blank(),
+    axis.ticks         = element_blank(),
+    axis.text.x.top    = element_text(family = "Lato", size = 12, color = BKA_GREY),
+    plot.margin        = margin(15, 25, 15, 15)
+  )
+
+# ---- Brand bar header (BKA amber stripe) ----
+brand_bar <- ggplot() +
+  annotate("rect", xmin = 0, xmax = 1,    ymin = 0.55, ymax = 0.70, fill = BRAND_COLOR) +
+  annotate("rect", xmin = 0, xmax = 0.04, ymin = 0.05, ymax = 0.55, fill = BRAND_COLOR) +
+  scale_x_continuous(limits = c(0, 1), expand = c(0, 0)) +
+  scale_y_continuous(limits = c(0, 1), expand = c(0, 0)) +
+  theme_void()
+
+# ---- Compose with patchwork ----
+composed <- (brand_bar / plt) +
+  plot_layout(heights = c(0.02, 1)) +
+  plot_annotation(
+    title    = "Only 4 of 47 African countries meet the SDG maternal-mortality target",
+    subtitle = "Maternal deaths per 100,000 live births (WHO, 2023): Nigeria's rate (993) is 25\u00d7 Cabo Verde's (40); SDG 3.1 target is < 70  |  Hover over bars for details",
+    caption  = paste0(
+      "Source: WHO Global Health Observatory (indicator MDG_0000000026, retrieved Apr 2026) | BKA analysis\n",
+      "Visualization: BK Advisors \u2014 bk-advisors.github.io"
+    ),
+    theme = theme(
+      plot.title    = element_text(family = "Lato", face = "bold",
+                                   size = 18, color = BKA_NAVY,
+                                   margin = margin(t = 6, b = 4),
+                                   lineheight = 1.15),
+      plot.subtitle = element_text(family = "Lato", size = 12,
+                                   color = BKA_GREY,
+                                   margin = margin(b = 10),
+                                   lineheight = 1.2),
+      plot.caption  = element_text(family = "Lato", size = 9,
+                                   color = BKA_GREY, hjust = 0)
+    )
+  )
+
+# ---- Render as interactive widget ----
+girafe(
+  ggobj = composed,
+  width_svg = 10,
+  height_svg = 14,
+  options = list(
+    opts_tooltip(
+      css = paste0(
+        "background-color:", BKA_NAVY, ";",
+        "color:white;",
+        "padding:8px 12px;",
+        "border-radius:4px;",
+        "font-family:Lato,Arial,sans-serif;",
+        "font-size:13px;",
+        "line-height:1.4;",
+        "box-shadow:2px 2px 6px rgba(0,0,0,0.3);"
+      ),
+      opacity = 0.95
+    ),
+    opts_hover(
+      css = "stroke:#242852;stroke-width:2px;cursor:pointer;"
+    ),
+    opts_sizing(rescale = TRUE, width = 1)
+  )
+)
+```

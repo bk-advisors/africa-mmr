@@ -1,0 +1,24 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+
+/.quarto/
+**/*.quarto_ipynb
+
+# Quarto rendering artifacts
+search.json
+site_libs/
+CLAUDE.html
+
+# Project docs (private — not for public repo)
+CLAUDE.md
+WORKFLOW.md
+
+# Raw WHO API dumps (re-fetch with curl per R/prep_africa_mmr.R)
+data/who_mmr_raw.json
+data/who_countries_raw.json
+
+# Cached API data (re-fetch with R/fetch_validation_data.R)
+data/validation_cache.rds
+.positai
